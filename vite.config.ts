@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
+    // base: './' garante que os caminhos dos arquivos (js/css) sejam relativos.
+    // Isso evita tela branca se o site for hospedado em subpastas na Hostinger.
+    base: './', 
     define: {
       // This allows using process.env.API_KEY in the client-side code
       'process.env.API_KEY': JSON.stringify(env.API_KEY)
