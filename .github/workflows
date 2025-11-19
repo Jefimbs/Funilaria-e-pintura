@@ -1,0 +1,20 @@
+name: ChatGPT Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  chatgpt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run ChatGPT Script
+        env:
+          OPENAI_API_KEY: ${{ secrets.GITHUB_PAT }}
+        run: |
+          echo "A automação com ChatGPT está configurada com sucesso!"
