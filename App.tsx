@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, MessageCircle, LogOut, User, Plus, Image as ImageIcon, Wand2, ChevronLeft, Car, Paintbrush, CheckCircle, Settings, Save, Trash2, X, Pencil, Palette, Shield, Lock } from 'lucide-react';
+import { Camera, Upload, MessageCircle, LogOut, User, Plus, Image as ImageIcon, Wand2, ChevronLeft, Car, Paintbrush, CheckCircle, Settings, Save, Trash2, X, Pencil, Palette, Shield, Lock, UploadCloud } from 'lucide-react';
 import { Button } from './components/Button';
 import { Input, Select, Textarea } from './components/Input';
 import { Job, JobStatus, UserSession, PhotoStage, Photo, Client, AdminUser } from './types';
@@ -100,45 +100,51 @@ export default function App() {
     setIsLoading(true);
     
     setTimeout(() => {
-      // SuperAdmin Check
-      if (username === 'Jefersonbs' && pass === '1020#') {
-        setSession({ role: 'superadmin', name: 'SuperAdmin' });
-        setView('superadmin');
-        setIsLoading(false);
-        return;
-      }
-
-      if (role === 'admin') {
-        const admins = storage.getAdmins();
-        const adminUser = admins.find(a => a.username === username && a.password === pass);
-        
-        if (adminUser) {
-           setSession({ role: 'admin', name: adminUser.name });
-           setView('dashboard');
-        } else {
-           alert('Credenciais de oficina inválidas');
+      try {
+        // SuperAdmin Check
+        if (username === 'Jefersonbs' && pass === '1020#') {
+          setSession({ role: 'superadmin', name: 'SuperAdmin' });
+          setView('superadmin');
+          setIsLoading(false);
+          return;
         }
-      } else if (role === 'client') {
-        const clients = storage.getClients();
-        const client = clients.find(c => c.email === username && c.password === pass);
-        if (client) {
-          setSession({ role: 'client', userId: client.id, name: client.name });
-          // Filter jobs for this client
-          const allJobs = storage.getJobs();
-          const myJobs = allJobs.filter(j => j.client.id === client.id);
-          if (myJobs.length > 0) {
-             setSelectedJob(myJobs[0]);
-             setView('job-details');
+
+        if (role === 'admin') {
+          const admins = storage.getAdmins();
+          const adminUser = admins.find(a => a.username === username && a.password === pass);
+          
+          if (adminUser) {
+            setSession({ role: 'admin', name: adminUser.name });
+            setView('dashboard');
           } else {
-             alert("Nenhum serviço encontrado para este cliente.");
+            alert('Credenciais de oficina inválidas');
+          }
+        } else if (role === 'client') {
+          const clients = storage.getClients();
+          const client = clients.find(c => c.email === username && c.password === pass);
+          if (client) {
+            setSession({ role: 'client', userId: client.id, name: client.name });
+            // Filter jobs for this client
+            const allJobs = storage.getJobs();
+            const myJobs = allJobs.filter(j => j.client.id === client.id);
+            if (myJobs.length > 0) {
+              setSelectedJob(myJobs[0]);
+              setView('job-details');
+            } else {
+              alert("Nenhum serviço encontrado para este cliente.");
+            }
+          } else {
+            alert('Credenciais de cliente inválidas');
           }
         } else {
-          alert('Credenciais de cliente inválidas');
+          alert('Credenciais inválidas');
         }
-      } else {
-        alert('Credenciais inválidas');
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao tentar realizar login. Tente novamente.");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }, 800);
   };
 
@@ -151,17 +157,21 @@ export default function App() {
   // --- Views ---
 
   if (view === 'login') {
-    return <LoginView systemName={systemSettings.name} onLogin={handleLogin} isLoading={isLoading} />;
+    return <LoginView settings={systemSettings} onLogin={handleLogin} isLoading={isLoading} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b px-4 py-3 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary p-2 rounded-lg text-white">
-            {session?.role === 'superadmin' ? <Shield size={20} /> : <Paintbrush size={20} />}
-          </div>
+        <div className="flex items-center gap-3">
+          {systemSettings.logo && session?.role !== 'superadmin' ? (
+             <img src={systemSettings.logo} alt="Logo" className="h-10 w-auto object-contain rounded" />
+          ) : (
+            <div className="bg-primary p-2 rounded-lg text-white">
+              {session?.role === 'superadmin' ? <Shield size={20} /> : <Paintbrush size={20} />}
+            </div>
+          )}
           <h1 className="font-bold text-xl text-slate-800 hidden sm:block">
             {session?.role === 'superadmin' ? 'Painel SuperAdmin' : systemSettings.name}
           </h1>
@@ -212,7 +222,7 @@ export default function App() {
 
 // --- Sub-Components ---
 
-function LoginView({ systemName, onLogin, isLoading }: { systemName: string, onLogin: (r: any, u: string, p: string) => void, isLoading: boolean }) {
+function LoginView({ settings, onLogin, isLoading }: { settings: { name: string, logo?: string }, onLogin: (r: any, u: string, p: string) => void, isLoading: boolean }) {
   const [activeTab, setActiveTab] = useState<'admin' | 'client'>('client');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
@@ -221,10 +231,16 @@ function LoginView({ systemName, onLogin, isLoading }: { systemName: string, onL
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-100">
         <div className="p-8 text-center border-b border-slate-100 bg-white">
-          <div className="bg-primary w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
-            <Car className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800">{systemName}</h2>
+          {settings.logo ? (
+             <div className="h-24 flex items-center justify-center mb-4">
+               <img src={settings.logo} alt="Logo do Sistema" className="h-full w-auto object-contain" />
+             </div>
+          ) : (
+            <div className="bg-primary w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
+              <Car className="w-8 h-8 text-white" />
+            </div>
+          )}
+          <h2 className="text-2xl font-bold text-slate-800">{settings.name}</h2>
           <p className="text-slate-500 text-sm mt-1">Acompanhamento de Pintura e Funilaria</p>
         </div>
         
@@ -247,7 +263,7 @@ function LoginView({ systemName, onLogin, isLoading }: { systemName: string, onL
           <form onSubmit={(e) => { e.preventDefault(); onLogin(activeTab, email, pass); }}>
             <Input 
               label={activeTab === 'admin' ? "Usuário" : "E-mail"} 
-              type={activeTab === 'admin' ? "text" : "email"}
+              type="text" // Changed from email to text to allow logins like 'Jefersonbs'
               placeholder=""
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -289,6 +305,23 @@ function SuperAdminDashboard({ onSettingsChange }: { onSettingsChange: () => voi
     alert('Configurações salvas com sucesso!');
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Simple size check (limit to ~1MB for local storage safety)
+      if (file.size > 1024 * 1024) {
+        alert("A imagem é muito grande. Por favor use uma imagem menor que 1MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings({ ...settings, logo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateAdmin = (e: React.FormEvent) => {
     e.preventDefault();
     const admin: AdminUser = {
@@ -320,7 +353,7 @@ function SuperAdminDashboard({ onSettingsChange }: { onSettingsChange: () => voi
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">Personalização do Sistema</h2>
-            <p className="text-sm text-slate-500">Altere a aparência e o nome da aplicação</p>
+            <p className="text-sm text-slate-500">Altere a aparência, nome e logo da aplicação</p>
           </div>
         </div>
 
@@ -341,6 +374,35 @@ function SuperAdminDashboard({ onSettingsChange }: { onSettingsChange: () => voi
                  className="h-10 w-20 p-1 rounded cursor-pointer border"
                />
                <span className="text-sm text-slate-500">{settings.primaryColor}</span>
+             </div>
+           </div>
+
+           {/* Logo Upload */}
+           <div className="md:col-span-2 border-t pt-4">
+             <label className="block text-sm font-medium text-slate-700 mb-2">Logo do Sistema</label>
+             <div className="flex items-center gap-4">
+                <div className="w-24 h-24 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center overflow-hidden relative">
+                  {settings.logo ? (
+                    <img src={settings.logo} alt="Logo Preview" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-xs text-slate-400 text-center p-2">Sem Logo</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                    <UploadCloud size={16} /> Carregar Nova Logo
+                    <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  </label>
+                  {settings.logo && (
+                    <button 
+                      onClick={() => setSettings({...settings, logo: undefined})}
+                      className="text-red-500 text-xs hover:underline text-left"
+                    >
+                      Remover Logo
+                    </button>
+                  )}
+                  <p className="text-xs text-slate-400">Recomendado: PNG Transparente (Máx 1MB)</p>
+                </div>
              </div>
            </div>
         </div>

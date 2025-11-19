@@ -61,4 +61,5 @@ export interface UserSession {
 export interface SystemSettings {
   name: string;
   primaryColor: string;
+  logo?: string; // Base64 string of the logo
 }
